@@ -8,7 +8,6 @@ def main():
     pass
 
 @main.command()
-#@click.argument('upload')
 @click.argument('filename', nargs=-1)
 @click.argument('datasetid', nargs=1)
 def upload(filename, datasetid):
