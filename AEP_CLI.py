@@ -20,5 +20,19 @@ def upload(filename, datasetid):
 def login(config):
     print(config)
 
+@main.command()
+@click.argument('batchID', nargs=1)
+def check_batch(batchID):
+    print(batchID)
+
+@main.command()
+@click.argument('limit', nargs=1)
+@click.option('-s', '--search', 'string')
+def getdatasetids(limit, string):
+    print(limit)
+    if string is not None:
+        print(string)
+
+
 if __name__ == "__main__":
     main()
