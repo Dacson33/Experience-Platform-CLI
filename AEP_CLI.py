@@ -17,8 +17,9 @@ def main():
 @main.command()
 @click.argument('filename', nargs=-1)
 @click.argument('datasetid', nargs=1)
-def upload(filename, datasetid):
-    login('config.json')
+@click.option('--config', 'config')
+def upload(filename, datasetid, config):
+    login(config)
     print(datasetid)
     for str in filename:
         try:
@@ -29,8 +30,8 @@ def upload(filename, datasetid):
         print(str)
 
 
-@main.command()
-@click.option('--config', nargs=1)
+#@main.command()
+#@click.option('--config', nargs=1)
 def login(config):
     if config is None:
         createConfig(None)
@@ -82,11 +83,11 @@ def createConfig(str):
         with open("config.json", 'w') as outfile:
             json.dump(data, outfile, indent=4)
         if platform.system() == 'Darwin':
-            subprocess.call('open', 'config.json')
+            subprocess.call(['open', 'config.json'])
         elif platform.system() == 'Windows':
             os.startfile('config.json')
         else:
-            subprocess.call('xdg-open', 'config.json')
+            subprocess.call(['xdg-open', 'config.json'])
         return True
     else:
         return False
