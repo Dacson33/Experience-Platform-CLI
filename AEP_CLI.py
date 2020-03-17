@@ -65,7 +65,8 @@ def upload(ctx, filename, datasetid):
                   "the file. If no filepath is given, user will be prompted to create one. Choosing to do so "
                   "will open a new JSON in the current working directory with the proper formatting.")
 @click.option('--config', nargs=1)
-def login(config):
+@click.pass_context
+def login(ctx, config):
     if config is None:
         createConfig(None)
     else:
@@ -108,8 +109,8 @@ def createConfig(str):
         msg = "Since you have not provided a config file path, would you like to create one now" \
               " in your current working directory?"
     else:
-        msg = str + " does not seem to be a valid file path.\n Would you like to create a" \
-               " new config file in the working directory now?"
+        msg = "After searching your working directory for " + str + "it does appear you have a config file.\n " \
+              "Would you like to create a new config file in the now?"
     if click.confirm(msg, default=False):
         print("Opening new json file with formatted template")
         data = {}
