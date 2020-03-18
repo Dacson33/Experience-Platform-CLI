@@ -1,7 +1,9 @@
-import platform
-import subprocess
 import json
 import os
+import platform
+import subprocess
+
+import aep_sdk
 
 import click
 
@@ -18,8 +20,11 @@ def main():
 @click.argument('filename', nargs=-1)
 @click.argument('datasetid', nargs=1)
 def upload(filename, datasetid):
-    login('config.json')
+    #login('config.json')
     print(datasetid)
+    api = aep_sdk.API('config.json')
+    api.validate(datasetid)
+    api.upload(filename, datasetid)
     for str in filename:
         try:
             with open(str) as f:
