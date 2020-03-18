@@ -7,6 +7,9 @@ from prompt_toolkit.history import FileHistory
 import click
 import click_repl
 
+import aep_sdk
+
+
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
@@ -42,9 +45,12 @@ Will attempt login and creation of config.json if needed.
 @click.argument('datasetid', nargs=1)
 @click.pass_context
 def upload(ctx, filename, datasetid):
-    if not ctx.invoke(login, config=["config.json"]):
-        print("No config created, Upload aborted")
-        return False
+    if not "API" in ctx.obj:
+        if not ctx.invoke(login, config="config.json"):
+            print("No config created, Upload aborted")
+            return False
+        else:
+            pass
     if len(filename) < 1:
         print("There must be at least one file to upload. Upload aborted")
         return
@@ -68,27 +74,32 @@ def upload(ctx, filename, datasetid):
 @click.pass_context
 def login(ctx, config):
     if config is None:
-        createConfig(None)
+        created = createConfig(ctx, None)
+        return handleConfigCreated(ctx, created)
     else:
         try:
             with open(config, "r") as f:
                 print(f.readlines())
                 return True
         except FileNotFoundError:
-            created = createConfig(config)
-            if created:
-                print("Attempt login operation")
-                return True
-            else:
-                print("A valid configuration file must be present "
-                      "in order to perform Adobe Experience Platform API calls.")
-                return False
+            created = createConfig(ctx, config)
+            return handleConfigCreated(ctx, created)
             # pass
 
+def handleConfigCreated(ctx, created):
+    if created:
+        print("Attempt login operation")
+        ctx.obj["access_token"] = "token made"
+        return True
+    else:
+        print("A valid configuration file must be present "
+              "in order to perform Adobe Experience Platform API calls.")
+        return False
 
 @cli.command(help="Checks the status of a batch with the given ID (Requires Login).")
 @click.argument('batchid', nargs=1)
-def check_batch(batchid):
+@click.pass_context
+def check_batch(ctx, batchid):
     if batchid == "":
         print("There must be a batch ID to check")
         return
@@ -99,12 +110,13 @@ def check_batch(batchid):
                   " and filtered according to the optional string given")
 @click.argument('limit', nargs=1)
 @click.option('-s', '--search', 'string')
-def getdatasetids(limit, string):
+@click.pass_context
+def getdatasetids(ctx, limit, string):
     print(limit)
     if string is not None:
         print(string)
 
-def createConfig(str):
+def createConfig(ctx, str):
     if str is None:
         msg = "Since you have not provided a config file path, would you like to create one now" \
               " in your current working directory?"
