@@ -4,6 +4,8 @@ import json
 import os
 from prompt_toolkit.history import FileHistory
 
+from aep_sdk import API
+
 import click
 import click_repl
 
@@ -42,7 +44,7 @@ Will attempt login and creation of config.json if needed.
 @click.argument('datasetid', nargs=1)
 @click.pass_context
 def upload(ctx, filename, datasetid):
-    if not ctx.invoke(login, config=["config.json"]):
+    if not ctx.invoke(login, config="config.json"):
         print("No config created, Upload aborted")
         return False
     if len(filename) < 1:
@@ -51,6 +53,8 @@ def upload(ctx, filename, datasetid):
     if datasetid is None:
         print("There must be a datasetID in order to upload. Upload aborted")
         return
+    api = API('config.json')
+    api.upload(filename, datasetid)
     for str in filename:
         try:
             with open(str) as f:
@@ -91,6 +95,8 @@ def check_batch(batchid):
     if batchid == "":
         print("There must be a batch ID to check")
         return
+    api = API('config.json')
+    api.report(batchid)
     print(batchid)
 
 
@@ -100,6 +106,8 @@ def check_batch(batchid):
 @click.option('-s', '--search', 'string')
 def getdatasetids(limit, string):
     print(limit)
+    api = API('config.json')
+    print(api.dataId(limit))
     if string is not None:
         print(string)
 
