@@ -54,15 +54,10 @@ def upload(ctx, filename, datasetid):
         print("There must be a datasetID in order to upload. Upload aborted")
         return
     api = API('config.json')
-    api.upload(filename, datasetid)
-    for str in filename:
-        try:
-            with open(str) as f:
-                print(f.readlines())
-        except FileNotFoundError:
-            print(str, " does not seem to be a valid file path, please check your file paths")
-            continue
-        print(str)
+    try:
+        api.upload(filename, datasetid)
+    except FileNotFoundError:
+        print("One of the files does not seem to be a valid file path, please check your file paths")
 
 
 @cli.command(help="Optionally receives a filepath and attempts to login using the JSON information stored in "
@@ -98,6 +93,20 @@ def check_batch(batchid):
     api = API('config.json')
     api.report(batchid)
     print(batchid)
+
+@cli.command(help="Checks if a given dataset ID is valid to the account (Requires Login).")
+@click.argument('datasetid', nargs=1)
+def validate(datasetid):
+    if datasetid == "":
+        print("There must be a dataset ID to check")
+        return
+    api = API('config.json')
+    if api.validate(datasetid):
+        print("This dataset ID is valid")
+        return
+    else:
+        print("This is not a valid dataset ID")
+        return
 
 
 @cli.command(help="Gets the list of dataset IDs associated with your AEP account, limited to the number given"
