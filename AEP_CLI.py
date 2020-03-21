@@ -70,7 +70,7 @@ def login(config):
     else:
         try:
             with open(config, "r") as f:
-                print(f.readlines())
+                # print(f.readlines())
                 return True
         except FileNotFoundError:
             created = createConfig(config)
