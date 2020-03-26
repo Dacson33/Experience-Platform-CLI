@@ -66,7 +66,19 @@ def upload(ctx, filename, datasetid):
             continue
         print(str)
 
-
+"""
+Receives a file path for a configuration file of the form
+{
+    "api_key": "",
+    "client_secret": "",
+    "ims_org": "",
+    "jwt_token": "",
+    "sub": "",
+    "secret": ""
+}
+If no file is provided or the filepath is invalid, user will be given the option to create
+a config file in the working directory via a template that will automatically open.
+"""
 @cli.command(help="Optionally receives a filepath and attempts to login using the JSON information stored in "
                   "the file. If no filepath is given, user will be prompted to create one. Choosing to do so "
                   "will open a new JSON in the current working directory with the proper formatting.")
@@ -124,6 +136,7 @@ def createConfig(ctx, str):
         msg = "After searching your working directory for " + str + "it does appear you have a config file.\n " \
               "Would you like to create a new config file in the now?"
     if click.confirm(msg, default=False):
+        complete = None
         print("Opening new json file with formatted template")
         data = {}
         data["api_key"] = ""
@@ -140,6 +153,8 @@ def createConfig(ctx, str):
             os.startfile('config.json')
         else:
             subprocess.call('xdg-open', 'config.json')
+        while(complete == None):
+            complete = click.prompt("Press any key when config file is completed", type=any)
         return True
     else:
         return False
