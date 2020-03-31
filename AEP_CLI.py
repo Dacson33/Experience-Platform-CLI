@@ -21,8 +21,6 @@ def cli(ctx):
         ctx.invoke(repl)
     elif ctx.invoked_subcommand == "login":
        pass
-    else:
-        ctx.obj["API"] = aep_sdk.API(ctx.obj["defaultConfig"])
 
 
 def repl():
@@ -156,10 +154,10 @@ def check_batch(ctx, batchid):
 
 @cli.command(help="Gets the list of dataset IDs associated with your AEP account, limited to the number given"
                   " and filtered according to the optional string given")
-@click.argument('limit', nargs=1)
-@click.option('-s', '--search', 'string')
+@click.argument('limit', nargs=1, type=int)
+@click.option('-s', '--search', '-string', type=str)
 @click.pass_context
-def getdatasetids(ctx, limit, search):
+def getdatasetids(ctx, search, limit):
     """
     Retrieve a list of datasetIDs associated with this user (limited to the limit number)
     Search them and find any that match the search term (if one is provided), else print them
