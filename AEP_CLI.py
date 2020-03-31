@@ -19,8 +19,6 @@ def cli(ctx):
     ctx.obj["defaultConfig"] = 'config.json'
     if ctx.invoked_subcommand is None:
         ctx.invoke(repl)
-    elif ctx.invoked_subcommand == "login":
-       pass
 
 
 def repl():
@@ -131,7 +129,7 @@ def login(ctx, config):
     return True
 
 
-@cli.command(help="Checks the status of a batch with the given ID (Requires Login).")
+@cli.command(help="Checks the status of a batch with the given ID. Will attempt login before checking.")
 @click.argument('batchid', nargs=1)
 @click.pass_context
 def check_batch(ctx, batchid):
@@ -153,7 +151,7 @@ def check_batch(ctx, batchid):
 
 
 @cli.command(help="Gets the list of dataset IDs associated with your AEP account, limited to the number given"
-                  " and filtered according to the optional string given")
+                  " and filtered according to the optional string given. Will attempt login before attempting")
 @click.argument('limit', nargs=1, type=int)
 @click.option('-s', '--search', '-string', type=str)
 @click.pass_context
@@ -175,7 +173,7 @@ def getdatasetids(ctx, search, limit):
         print(search)
 
 
-@cli.command(help="Checks if a given dataset ID is valid to the account (Requires Login).")
+@cli.command(help="Checks if a given dataset ID is valid to the account. Will attempt login before validation")
 @click.argument('datasetid', nargs=1)
 @click.pass_context
 def validate(ctx, datasetid):
