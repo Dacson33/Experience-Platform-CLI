@@ -9,6 +9,7 @@ import click_repl
 
 import aep_sdk
 
+
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
@@ -16,7 +17,7 @@ def cli(ctx):
     CLI Utility for uploading data to the Adobe Experience Platform
     """
     # Set the name for the default configuration file to seek in the working directory
-    ctx.obj["defaultConfig"] = 'config.json'
+    ctx.obj["config"] = 'config.json'
     if ctx.invoked_subcommand is None:
         ctx.invoke(repl)
 
@@ -101,7 +102,7 @@ def login(ctx, config):
         else:
             return False
     if config is None:
-        config = ctx.obj["defaultConfig"]
+        config = ctx.obj["config"]
     try:
         api = aep_sdk.API(config)
         api.access()
@@ -112,9 +113,10 @@ def login(ctx, config):
             return False
         else:
             try:
-                api = aep_sdk.API(ctx.obj["defaultConfig"])
+                api = aep_sdk.API(ctx.obj["config"])
                 api.access()
                 ctx.obj["API"] = api
+                print("Login successful")
             except Exception as e:
                 print("The following error occured when creating the API object: ")
                 print(e)
@@ -233,11 +235,11 @@ def createConfig(ctx, configFile):
         with open("config.json", 'w') as outfile:
             json.dump(data, outfile, indent=4)
         if platform.system() == 'Darwin':
-            subprocess.call(['open', ctx.obj["defaultConfig"]])
+            subprocess.call(['open', ctx.obj["config"]])
         elif platform.system() == 'Windows':
-            os.startfile(ctx.obj["defaultConfig"])
+            os.startfile(ctx.obj["config"])
         else:
-            subprocess.call('xdg-open', ctx.obj["defaultConfig"])
+            subprocess.call('xdg-open', ctx.obj["config"])
         input("Press Enter when you are done editing your config file")
         return True
     else:
