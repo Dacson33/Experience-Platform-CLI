@@ -2,10 +2,12 @@ import platform
 import subprocess
 import json
 import os
+from statistics import mean
 from prompt_toolkit.history import FileHistory
 
 import click
 import click_repl
+from fuzzywuzzy import fuzz
 
 import aep_sdk
 
@@ -57,10 +59,10 @@ def upload(ctx, filename, datasetid):
     if not APIReady:
         return False
     if datasetid is None:
-        print("There must be a datasetID in order to upload. Upload aborted")
+        print("There must be a datasetID in order to upload (final argument is read as the datasetid). Upload aborted")
         return False
     if not "API" in ctx.obj:
-        print("An error occured when creating the API handler object, "
+        print("An error occured when creating the aep_sdk.API object, "
               "please check your config file. Upload aborted")
         return False
     api = ctx.obj["API"]
@@ -70,6 +72,10 @@ def upload(ctx, filename, datasetid):
         except FileNotFoundError:
             print(str, " does not seem to be a valid file path, please check your file paths")
             continue
+        except Exception as e:
+            print("the following error occured when attempting upload: ")
+            print(e)
+            return False
         print(str)
 
 
@@ -95,39 +101,43 @@ def login(ctx, config):
     :param config: Optionally passed in from the command line as a file path to the config file
     :return Returns false if login failed
     """
+    loggedIn = False
     # If the api object already exists they have logged in, so we will prompt them in case it was accidental
     if "API" in ctx.obj:
+        loggedIn = True
         if click.confirm("You are already logged in, would you like to login again? "):
             pass
         else:
+            print("cancelling login")
             return False
     if config is None:
         config = ctx.obj["config"]
     try:
+        print("Attempting login using " + ctx.obj["config"])
         api = aep_sdk.API(config)
-        api.access()
+        authToken = api.access()
         ctx.obj["API"] = api
+        ctx.obj["Auth"] = authToken
     except FileNotFoundError:
-        created = createConfig(ctx, config)
+        created = createConfig(ctx, config, loggedIn)
         if not created:
             return False
         else:
             try:
                 api = aep_sdk.API(ctx.obj["config"])
-                api.access()
+                authToken = api.access()
                 ctx.obj["API"] = api
+                ctx.obj["Auth"] = authToken
                 print("Login successful")
             except Exception as e:
-                print("The following error occured when creating the API object: ")
-                print(e)
-                print("Usually this is caused by an error in the config file")
+                APIError(e)
                 return False
         # pass
     except Exception as e:
-        print("The following error occured when creating the API object: ")
-        print(e)
-        print("Usually this is caused by an error in the config file")
+        APIError(e)
         return False
+    print("login success")
+    print("Access Token: " + authToken.token)
     return True
 
 
@@ -170,7 +180,12 @@ def getdatasetids(ctx, search, limit):
     if not APIReady:
         return False
     api = ctx.obj["API"]
-    print(api.dataId(limit))
+    dataSets = api.get_datasets(limit)
+    if search is not None:
+        dataSets = searchDSIDNames(search, dataSets)
+    print("Datasets:")
+    for dataset in dataSets:
+        print("\t", dataset)
     if search is not None:
         print(search)
 
@@ -193,11 +208,40 @@ def validate(ctx, datasetid):
         return
     api = ctx.obj["API"]
     if api.validate(datasetid):
-        print("This dataset ID is valid")
+        print(datasetid + " is valid.")
         return
     else:
         print("This is not a valid dataset ID")
         return
+
+
+def APIError(e):
+    print("The following error occured when creating the API object: ")
+    print(e)
+    print("Usually this is caused by an error in the config file")
+
+
+def searchDSIDNames(toFind, toSearch):
+    """
+    Search function for getting all datasetid names that match a fuzzy search for the term.
+    The fuzzy search involves computing several levenshtein ratios using the fuzzywuzzy library
+    then averaging them and checking if the average breaches a specific threshold
+    :param toFind: Search term
+    :param toSearch: List of dataset IDS received from the API to search through
+    :return: Updated list containing only strings that may match the given term
+    """
+    toRet = []
+    ratios = []
+    for item in toSearch:
+        dsIDName = item.name
+        ratios.append(fuzz.ratio(toFind, dsIDName))
+        ratios.append(fuzz.partial_ratio(toFind, dsIDName))
+        ratios.append(fuzz.partial_ratio(toFind, dsIDName))
+        ratios.append(fuzz.partial_ratio(toFind, dsIDName))
+        if mean(ratios) > 60:
+            toRet.append(item)
+        ratios.clear()
+    return toRet
 
 
 def checkForAPI(ctx, msg, filename="config.json"):
@@ -208,14 +252,16 @@ def checkForAPI(ctx, msg, filename="config.json"):
     :param filename: File path of the configuration file. To attempt API creation from if no API exists
     :return: Boolean of whether a valid API object has already been instantiated
     """
-    if not "API" in ctx.obj:
-        if not ctx.invoke(login, config=filename):
+    if "API" not in ctx.obj:
+        if ctx.invoke(login, config=filename):
+            return True
+        else:
             print(msg + " aborted")
             return False
-        else:
-            return True
+    else:
+        return True
 
-def createConfig(ctx, configFile):
+def createConfig(ctx, configFile, loggedIn=False):
     """
     creates a new config file in the working directory if the user wants to, else returns to the CLI
     :param ctx: Context object associated with the click CLI, will contain the API object
@@ -225,13 +271,12 @@ def createConfig(ctx, configFile):
     msg = "After searching for " + configFile + " it does appear to exist.\n\n" \
           "Would you like to create a new config.json file in your working directory now?"
     if click.confirm(msg, default=False):
-        data = {}
-        data["api_key"] = ""
-        data["client_secret"] = ""
-        data["ims_org"] = ""
-        data["jwt_token"] = ""
-        data["sub"] = ""
-        data["secret"] = ""
+        data = {"api_key": "",
+                "client_secret": "",
+                "ims_org": "",
+                "jwt_token": "",
+                "sub": "",
+                "secret": ""}
         with open("config.json", 'w') as outfile:
             json.dump(data, outfile, indent=4)
         if platform.system() == 'Darwin':
@@ -243,8 +288,11 @@ def createConfig(ctx, configFile):
         input("Press Enter when you are done editing your config file")
         return True
     else:
-        print("A valid configuration file must be present "
-              "in order to perform Adobe Experience Platform API calls.")
+        if loggedIn is False:
+            print("A valid configuration file must be present "
+                  "in order to perform Adobe Experience Platform API calls.")
+        else:
+            print("Cancelled creation of new config.json")
         return False
 
 if __name__ == "__main__":
